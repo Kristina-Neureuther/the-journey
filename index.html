@@ -57,8 +57,8 @@
 <div class="ui-container">
     <span class="game-title">The Journey</span>
     <span class="level-indicator" id="levelTxt">LEVEL 1 / 3</span><br>
-    Zeichne mit der Maus goldenen Brücken, damit die Schildkröte sicher nach Hause kommt.<br>
-   
+    Führe die Schildkröte sicher nach Hause.<br>
+    Sie dreht sich um, wenn sie gegen Wände stösst.
 </div>
 
 <script>
@@ -67,7 +67,7 @@ let totalLevels = 3;
 let turtles = [];
 let drawnLines = [];
 let currentLine = [];
-let spawnTimer = 1;
+let spawnTimer = 0;
 let savedCount = 0;
 let turtlesNeeded = 1;
 let totalTurtlesSpawned = 0;
@@ -128,7 +128,7 @@ function loadLevel(lvl) {
     drawnLines = [];
     turtles = [];
     currentLine = [];
-    spawnTimer = 1;
+    spawnTimer = 0;
     savedCount = 0;
     totalTurtlesSpawned = 0;
     gameOver = false;
