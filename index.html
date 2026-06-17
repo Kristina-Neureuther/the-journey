@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Journey - A Beautiful Summer Adventure</title>
+    <title>The Journey - A Beautiful Summer Puzzle</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
         body {
@@ -31,7 +31,7 @@
 
         .game-title {
             display: block;
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 800;
             letter-spacing: 6px;
             color: #1a2b4c;
@@ -57,8 +57,7 @@
 <div class="ui-container">
     <span class="game-title">The Journey</span>
     <span class="level-indicator" id="levelTxt">LEVEL 1 / 3</span><br>
-    Zeichne goldenen Brücken, damit die Schildkröte sicher ans Ziel kommt.<br>
-
+    <span class="highlight">KLICKE & ZIEHE</span>, um goldene Brücken zu zeichnen und die Schildkröte sicher an ihr Ziel zu bringen.
 </div>
 
 <script>
@@ -69,20 +68,20 @@ let drawnLines = [];
 let currentLine = [];
 let spawnTimer = 0;
 let savedCount = 0;
+// Nur noch EINE Schildkröte pro Level
 let turtlesNeeded = 1;
 let totalTurtlesSpawned = 0;
 let maxTurtlesToSpawn = 1;
 let gameOver = false;
 
-// Umgebungs-Elemente & Grafik
+// Umgebungs-Elemente
 let clouds = [];
-let mountainsFar = [];
+let hillsBackground = [];
+let hillsForeground = [];
 let particles = [];
 let sunPos;
-let waterOffset = 0;
 
-// Organische Terrain-Daten
-let terrainGeometry = [];
+let platforms = [];
 let startPos = {x: 0, y: 0};
 let goalPos = {x: 0, y: 0, w: 75, h: 85};
 
@@ -90,37 +89,33 @@ function setup() {
     createCanvas(windowWidth, windowHeight);
     sunPos = { x: width - 150, y: 120 };
     
-    // Grafische Elemente initialisieren
     for(let i = 0; i < 6; i++) {
         clouds.push({
-            x: random(width), y: random(height * 0.35), 
-            size: random(100, 200), speed: random(0.1, 0.25)
+            x: random(width), y: random(height * 0.4), 
+            size: random(80, 160), speed: random(0.1, 0.25)
         });
     }
     
-    for(let i = 0; i < 50; i++) {
+    for(let i = 0; i < 40; i++) {
         particles.push({
             x: random(width), y: random(height),
-            size: random(2, 6), speed: random(0.5, 1.5), angle: random(TWO_PI)
+            size: random(2, 5), speed: random(0.5, 1.5), angle: random(TWO_PI)
         });
     }
-    
-    // Parallax-Berge im Hintergrund
-    generateBackgroundMountains();
 
     loadLevel(currentLevel);
 }
 
-// Generiert die Parallax-Berge im fernen Hintergrund
-function generateBackgroundMountains() {
-    mountainsFar = [];
-    let yOff = 0;
-    for(let x = 0; x <= width + 100; x += 30) {
-        mountainsFar.push({
-            x: x,
-            y: height/2 + noise(yOff) * 150 - 50
-        });
-        yOff += 0.04;
+function generateHills() {
+    hillsBackground = [];
+    hillsForeground = [];
+    let yOff1 = 0;
+    let yOff2 = 100;
+    for(let x = 0; x <= width + 100; x += 40) {
+        hillsBackground.push({ x: x, y: height - 120 - noise(yOff1) * 140 });
+        hillsForeground.push({ x: x, y: height - 40 - noise(yOff2) * 80 });
+        yOff1 += 0.05; 
+        yOff2 += 0.06;
     }
 }
 
@@ -133,58 +128,50 @@ function loadLevel(lvl) {
     totalTurtlesSpawned = 0;
     gameOver = false;
     
+    generateHills();
     document.getElementById("levelTxt").innerText = `LEVEL ${lvl} / ${totalLevels}`;
     
-    // Organische Terrain-Generierung je nach Level
-    terrainGeometry = [];
     if (lvl === 1) {
-        startPos = { x: 150, y: 300 };
-        goalPos = { x: width - 250, y: height - 210, w: 75, h: 85 };
-        // Level 1: Einfache Inseln
-        terrainGeometry.push(generateIsland(0, width * 0.3, 300, 80)); // Start
-        terrainGeometry.push(generateIsland(width * 0.6, width, height - 120, 90)); // Ziel
+        startPos = { x: 150, y: 250 };
+        goalPos = { x: width - 240, y: 390, w: 75, h: 85 };
+        platforms = [
+            { x: 40, y: 250, w: 220, h: 45 }, 
+            { x: width - 300, y: 475, w: 260, h: 45 } 
+        ];
     } else if (lvl === 2) {
-        startPos = { x: 150, y: height/2 - 20 };
-        goalPos = { x: width - 220, y: height/2 - 20, w: 75, h: 85 };
-        // Level 2: Ein großer Berg in der Mitte
-        terrainGeometry.push(generateIsland(0, width * 0.25, height/2, 60)); // Start
-        terrainGeometry.push(generateIsland(width/2 - 150, width/2 + 150, height/2 + 100, 350)); // MASSIVER BERG
-        terrainGeometry.push(generateIsland(width * 0.75, width, height/2, 60)); // Ziel
+        startPos = { x: 150, y: 200 };
+        goalPos = { x: width - 240, y: 150, w: 75, h: 85 };
+        platforms = [
+            { x: 40, y: 200, w: 200, h: 45 }, 
+            { x: width/2 - 120, y: 440, w: 240, h: 45 }, 
+            { x: width - 280, y: 235, w: 200, h: 45 } 
+        ];
     } else if (lvl === 3) {
-        startPos = { x: 120, y: 200 };
-        goalPos = { x: width/2 - 37, y: height - 180, w: 75, h: 85 };
-        // Level 3: Komplexe Klippen
-        terrainGeometry.push(generateIsland(0, width * 0.2, 200, 70)); // Start oben
-        terrainGeometry.push(generateIsland(width - 250, width, height/2, 250)); // Klippe rechts
-        terrainGeometry.push(generateIsland(100, 400, height - 100, 150)); // Klippe links unten
-        terrainGeometry.push(generateIsland(width / 2 - 130, width / 2 + 130, height - 80, 80)); // Zielboden Mitte
+        startPos = { x: 120, y: 180 };
+        goalPos = { x: width / 2 - 37, y: height - 220, w: 75, h: 85 };
+        platforms = [
+            { x: 40, y: 180, w: 180, h: 45 }, 
+            { x: width - 280, y: 320, w: 220, h: 45 }, 
+            { x: 80, y: 500, w: 220, h: 45 }, 
+            { x: width / 2 - 130, y: height - 135, w: 260, h: 45 } 
+        ];
     }
 }
 
-// Hilfsfunktion zur Generierung von organisch geformten Inseln/Bergen
-function generateIsland(xStart, xEnd, yBase, heightNoise) {
-    let pts = [];
-    let yOff = random(100);
-    let step = 15;
+function drawGradientShape(points, colorTop, colorBottom) {
+    let grad = drawingContext.createLinearGradient(0, height - 300, 0, height);
+    grad.addColorStop(0, colorTop);
+    grad.addColorStop(1, colorBottom);
+    drawingContext.fillStyle = grad;
     
-    for(let x = xStart; x <= xEnd; x += step) {
-        // Berechne Höhe basierend auf Perlin Noise, aber flache die Enden ab
-        let flatFactor = sin(map(x, xStart, xEnd, 0, PI));
-        let h = noise(yOff) * heightNoise * flatFactor;
-        pts.push({ x: x, y: yBase - h });
-        yOff += 0.1;
-    }
-    // Stelle sicher, dass der letzte Punkt exakt getroffen wird
-    if(pts[pts.length-1].x < xEnd) pts.push({ x: xEnd, y: pts[pts.length-1].y });
-    
-    return { points: pts, base: yBase };
+    beginShape();
+    vertex(0, height);
+    for(let p of points) vertex(p.x, p.y);
+    vertex(width, height);
+    endShape(CLOSE);
 }
 
 function draw() {
-    // Parallax Effekt berechnen (Mausgesteuert)
-    let parallaxX = map(mouseX, 0, width, -20, 20);
-    let parallaxY = map(mouseY, 0, height, -10, 10);
-
     // 1. Himmel
     let skyGrad = drawingContext.createLinearGradient(0, 0, 0, height);
     skyGrad.addColorStop(0, "#3a9ced"); 
@@ -192,9 +179,12 @@ function draw() {
     drawingContext.fillStyle = skyGrad;
     drawingContext.fillRect(0, 0, width, height);
 
-    // 2. Sonne & Parallax Wolken
-    push();
-    translate(parallaxX * 0.2, parallaxY * 0.2); // Wenig Parallax für die Sonne
+    // 2. Sonne & Lichtstrahlen
+    noStroke();
+    for (let i = 0; i < 5; i++) {
+        fill(255, 240, 150, 15 - i * 2);
+        arc(sunPos.x, sunPos.y, 800 + i * 400, 800 + i * 400, PI/2, PI);
+    }
     drawingContext.shadowBlur = 60;
     drawingContext.shadowColor = color(255, 230, 100);
     fill(255, 240, 120);
@@ -202,10 +192,8 @@ function draw() {
     fill(255, 255, 200);
     ellipse(sunPos.x, sunPos.y, 80, 80);
     drawingContext.shadowBlur = 0;
-    pop();
 
-    push();
-    translate(parallaxX * 0.5, parallaxY * 0.3); // Mittel Parallax für Wolken
+    // 3. Wolken
     fill(255, 255, 255, 230);
     for(let c of clouds) {
         c.x -= c.speed;
@@ -214,90 +202,52 @@ function draw() {
         ellipse(c.x - c.size * 0.3, c.y - c.size * 0.1, c.size * 0.6, c.size * 0.4);
         ellipse(c.x + c.size * 0.3, c.y - c.size * 0.15, c.size * 0.7, c.size * 0.5);
     }
-    pop();
 
-    // 3. Parallax Hintergrund-Berge
-    push();
-    translate(parallaxX * 0.8, parallaxY * 0.4); // Stark Parallax
-    let mtnsGrad = drawingContext.createLinearGradient(0, height/2, 0, height);
-    mtnsGrad.addColorStop(0, "#6dc971"); // Grün oben
-    mtnsGrad.addColorStop(1, "#429345"); // Dunkelgrün unten
-    drawingContext.fillStyle = mtnsGrad;
-    beginShape();
-    vertex(0, height);
-    for(let m of mountainsFar) vertex(m.x, m.y);
-    vertex(width, height);
-    endShape(CLOSE);
-    pop();
+    // 4. Hügel mit Gradients
+    drawGradientShape(hillsBackground, "#6dc971", "#429345");
+    drawGradientShape(hillsForeground, "#88e053", "#51a31d");
 
-    // 4. Wasser am unteren Rand (Animiert & Reflektionen)
-    fill(0, 150, 255, 140);
-    rect(0, height - 35, width, 35);
-    fill(255, 255, 255, 80);
-    waterOffset += 1.5;
-    for(let i = 0; i < width + 100; i+= 80) {
-        let x = (i - waterOffset % 80);
-        ellipse(x, height - 18 + sin(frameCount * 0.05 + i) * 6, 50, 5);
+    // 5. Wasser am unteren Rand
+    fill(0, 150, 255, 120);
+    rect(0, height - 30, width, 30);
+    fill(255, 255, 255, 60);
+    for(let i = 0; i < width; i+= 60) {
+        ellipse(i + (frameCount * 0.5) % 60, height - 15 + sin(frameCount * 0.05 + i) * 5, 40, 4);
     }
 
-    // 5. Sommer-Pollen (Partikel)
-    fill(255, 255, 255, 200);
+    // 6. Sommer-Pollen (Partikel)
+    fill(255, 255, 255, 180);
     for(let p of particles) {
-        p.x += cos(p.angle) * p.speed - 0.4;
-        p.y += sin(p.angle) * p.speed + 0.6;
-        p.angle += random(-0.06, 0.06);
+        p.x += cos(p.angle) * p.speed - 0.5;
+        p.y += sin(p.angle) * p.speed + 0.5;
+        p.angle += random(-0.05, 0.05);
         if(p.y > height) { p.y = -10; p.x = random(width); }
         if(p.x < 0) { p.x = width + 10; }
         ellipse(p.x, p.y, p.size);
     }
 
-    // --- ORGANISCHE BERGE / TERRAIN ---
-    for (let terrain of terrainGeometry) {
+    // --- PLATTFORMEN (Inseln) ---
+    for (let p of platforms) {
         drawingContext.shadowBlur = 15;
         drawingContext.shadowColor = 'rgba(0,0,0,0.3)';
-        
-        // Felsboden (Gradient für Tiefe)
-        let terrainGrad = drawingContext.createLinearGradient(0, terrain.base - 300, 0, terrain.base);
-        terrainGrad.addColorStop(0, "#785032"); 
-        terrainGrad.addColorStop(1, "#50301e"); 
-        drawingContext.fillStyle = terrainGrad;
+        fill(120, 80, 50); // Erde
         stroke(90, 50, 30);
         strokeWeight(2);
-        
-        // Zeichne die geschwungene Form
-        beginShape();
-        vertex(terrain.points[0].x, terrain.base + 50); // Boden links
-        for(let pt of terrain.points) vertex(pt.x, pt.y); // Gipfel-Linie
-        vertex(terrain.points[terrain.points.length-1].x, terrain.base + 50); // Boden rechts
-        endShape(CLOSE);
+        rect(p.x, p.y, p.w, p.h, 6, 6, 20, 20);
         drawingContext.shadowBlur = 0;
         
-        // Moos / Gras oben drauf
+        // Gras
+        fill(100, 200, 60);
         noStroke();
-        fill(110, 210, 70);
-        beginShape();
-        for(let pt of terrain.points) {
-            vertex(pt.x, pt.y);
-        }
-        for(let i = terrain.points.length - 1; i >= 0; i--) {
-            vertex(terrain.points[i].x, terrain.points[i].y + 16);
-        }
-        endShape(CLOSE);
+        rect(p.x, p.y - 3, p.w, 16, 6, 6, 0, 0);
         
-        // Dekorationen auf den Bergen (Blumen & Ranken)
+        // Dicke Ranken
         stroke(80, 170, 50);
-        strokeWeight(4);
-        for(let i=10; i<terrain.points.length; i+=40) {
-            let pt = terrain.points[i];
-            // Ranken hängen
-            line(pt.x, pt.y+10, pt.x, pt.y + 30 + sin(frameCount * 0.05 + pt.x)*5);
-            // Blumenköpfe
-            if(i % 80 === 0) {
-                noStroke();
-                fill(255, random(100, 200), 0, 200);
-                ellipse(pt.x, pt.y - 3, 5, 5);
-            }
-        }
+        strokeWeight(5);
+        strokeCap(ROUND);
+        line(p.x + 20, p.y + 13, p.x + 20, p.y + 35);
+        line(p.x + 40, p.y + 13, p.x + 40, p.y + 25);
+        line(p.x + p.w - 30, p.y + 13, p.x + p.w - 30, p.y + 40);
     }
     
     // --- START-PORTAL ---
@@ -330,25 +280,32 @@ function draw() {
     arc(goalPos.w/2, 10, goalPos.w, 45, PI, TWO_PI); 
     pop();
 
-    // --- SPAWN LOGIK (Spawnt sofort) ---
+    // --- SPAWN LOGIK (Spawnt sofort nach kurzem Moment) ---
     if (!gameOver && totalTurtlesSpawned < maxTurtlesToSpawn) {
-        turtles.push({
-            x: startPos.x,
-            y: startPos.y - 15,
-            vx: 1.4,
-            vy: 0,
-            size: 22,
-            isGrounded: true,
-            bounceTimer: random(100),
-            turnAroundTimer: 0 // Verhindert zuckendes Umdrehen
-        });
-        totalTurtlesSpawned++;
+        spawnTimer++;
+        if (spawnTimer > 30) { // Spawnt jetzt deutlich schneller
+            turtles.push({
+                x: startPos.x,
+                y: startPos.y - 15,
+                vx: 1.4,
+                vy: 0,
+                size: 22,
+                isGrounded: true,
+                bounceTimer: random(100)
+            });
+            totalTurtlesSpawned++;
+            spawnTimer = 0;
+        }
     }
 
-    // --- DICKE GEZEICHNETE BRÜCKEN ---
+    // --- ALLE LINIEN ZUSAMMENFASSEN FÜR GRAFIK & KOLLISION ---
+    // Hier kombinieren wir fertige Linien und die aktuell gezeichnete Linie
     let allLines = drawnLines.slice();
-    if (currentLine.length > 1) allLines.push(currentLine);
+    if (currentLine.length > 1) {
+        allLines.push(currentLine);
+    }
 
+    // --- DICKE GEZEICHNETE BRÜCKEN (Alle sehen exakt gleich aus!) ---
     // 1. Äußerer Glow (Weich)
     drawingContext.shadowBlur = 15;
     drawingContext.shadowColor = color(255, 100, 0);
@@ -384,47 +341,17 @@ function draw() {
         t.y += t.vy;
         t.isGrounded = false; 
         
-        // TERRAIN-KOLLISION (Geschwungene Berge)
-        for (let terrain of terrainGeometry) {
-            for (let j = 0; j < terrain.points.length - 1; j++) {
-                let p1 = terrain.points[j];
-                let p2 = terrain.points[j+1];
-                let minX = min(p1.x, p2.x);
-                let maxX = max(p1.x, p2.x);
-                
-                if (t.x >= minX - 2 && t.x <= maxX + 2) {
-                    let dx = p2.x - p1.x;
-                    let ratio = (t.x - p1.x) / dx;
-                    let groundY = p1.y + ratio * (p2.y - p1.y);
-                    
-                    // Kollision erkannt: Steht auf dem Berg
-                    if (t.y + 10 >= groundY - 10 && t.y - t.vy + 10 <= groundY + 15) {
-                        t.y = groundY - 10;
-                        t.isGrounded = true;
-                        
-                        // Steigung des Berges berechnen
-                        let angle = atan2(p2.y - p1.y, p2.x - p1.x);
-                        // Behalte Laufrichtung bei, passe aber vx an Steigung an
-                        if ((t.vx > 0 && abs(angle) < HALF_PI) || (t.vx < 0 && abs(angle) > HALF_PI)) {
-                             // Alles ok
-                        } else {
-                            angle += PI;
-                        }
-                        
-                        // NEUES FEATURE: UMDREHEN AM BERG
-                        // Wenn der Winkel zu steil ist (Bergauf), drehe um
-                        if (abs(angle) > radians(45) && t.turnAroundTimer === 0) {
-                            t.vx *= -1; // Geschwindigkeit umdrehen
-                            t.turnAroundTimer = 30; // Cooldown
-                        } else {
-                            t.vx = cos(angle) * 1.4;
-                        }
-                    }
+        // Plattform Kollision
+        for (let p of platforms) {
+            if (t.x > p.x && t.x < p.x + p.w) {
+                if (t.y + 10 >= p.y && t.y - t.vy + 10 <= p.y + 15) {
+                    t.y = p.y - 10;
+                    t.isGrounded = true;
                 }
             }
         }
         
-        // BRÜCKEN KOLLISION
+        // Brücken Kollision (Gilt jetzt auch für die Linie, die DU GERADE ZEICHNEST)
         for (let linePoints of allLines) {
             for (let j = 0; j < linePoints.length - 1; j++) {
                 let p1 = linePoints[j];
@@ -435,8 +362,9 @@ function draw() {
                 if (t.x >= minX - 2 && t.x <= maxX + 2) {
                     let dx = p2.x - p1.x;
                     let lineY;
-                    if (abs(dx) < 0.1) lineY = min(p1.y, p2.y);
-                    else {
+                    if (abs(dx) < 0.1) {
+                        lineY = min(p1.y, p2.y);
+                    } else {
                         let ratio = (t.x - p1.x) / dx;
                         lineY = p1.y + ratio * (p2.y - p1.y);
                     }
@@ -448,24 +376,13 @@ function draw() {
                         
                         let angle = atan2(p2.y - p1.y, p2.x - p1.x);
                         if (t.vx > 0 && p2.x < p1.x) angle += PI;
-                        
-                        // NEUES FEATURE: UMDREHEN AN ZU STEILER BRÜCKE
-                        if (abs(angle) > radians(55) && t.turnAroundTimer === 0) {
-                            t.vx *= -1;
-                            t.turnAroundTimer = 30;
-                        } else {
-                            t.vx = cos(angle) * 1.4;
-                        }
+                        t.vx = cos(angle) * 1.4;
                     }
                 }
             }
         }
         
-        // Falls auf flachem Boden und vx zu klein -> Sicherstellen, dass sie läuft
         if (t.isGrounded && abs(t.vx) < 0.2) t.vx = 1.4; 
-        
-        // Cooldown für Umdrehen verringern
-        if (t.turnAroundTimer > 0) t.turnAroundTimer--;
 
         // Ziel-Erkennung
         if (t.x > goalPos.x && t.x < goalPos.x + goalPos.w && t.y > goalPos.y && t.y < goalPos.y + goalPos.h) {
@@ -475,7 +392,7 @@ function draw() {
         }
         
         // Absturz ins Wasser -> Level Neustart!
-        if (t.y > height - 15) {
+        if (t.y > height - 10) {
             turtles.splice(i, 1);
             continue;
         }
@@ -498,7 +415,6 @@ function drawTurtle(x, y, size, vx, timer) {
     let shellColor = color(34, 139, 34);
     let skinColor = color(152, 251, 152);
 
-    // Beine
     fill(skinColor);
     stroke(20, 80, 20);
     strokeWeight(1.5);
@@ -507,19 +423,16 @@ function drawTurtle(x, y, size, vx, timer) {
     rect(-size/5, 4 - legWiggle, 5, 6, 2);  
     rect(size/6, 4 + legWiggle, 5, 6, 2);   
 
-    // Kopf (nickt beim Gehen)
     ellipse(size/2 + headWobble, -2, size * 0.45, size * 0.4);
     fill(0);
     noStroke();
     ellipse(size/2 + 4 + headWobble, -4, 3, 3); 
 
-    // Panzer
     fill(shellColor);
     stroke(20, 60, 20);
     strokeWeight(2);
     arc(0, 4, size, size + 2, PI, TWO_PI); 
 
-    // Panzer-Muster
     stroke(120, 220, 120, 180);
     strokeWeight(1.5);
     noFill();
@@ -537,42 +450,29 @@ function checkGameStatus() {
             loadLevel(currentLevel);
         } else {
             gameOver = true;
-            // WIN SCREEN WIRD AUTO IM DRAW() AUFGERUFEN
+            drawWinScreen();
         }
     } else if (turtles.length === 0 && totalTurtlesSpawned >= maxTurtlesToSpawn && savedCount < turtlesNeeded) {
+        // Schildkröte ist abgestürzt: Startet das Level sofort neu
         loadLevel(currentLevel);
-    }
-    
-    if (gameOver) {
-        drawWinScreen();
     }
 }
 
-// DEFINITIVE GEWINNNACHRICHT AM SCHLUSS
 function drawWinScreen() {
     push();
     textAlign(CENTER, CENTER);
     
-    // Schöner weicher Glow für den Sieg
-    drawingContext.shadowBlur = 30;
+    drawingContext.shadowBlur = 15;
     drawingContext.shadowColor = color(255, 255, 255);
-    
-    // RIESIGE GOLDENE ÜBERSCHRIFT
-    fill(220, 110, 0); // Kräftiges Gold
-    textSize(48);
-    textFont('Helvetica Neue', 900); // Super fette Schrift
-    text("VOLLENDET!", width / 2, height * 0.45);
+    fill(220, 90, 0);
+    textSize(36);
+    text("ALLES IST GUT! ☀️🐢", width / 2, height * 0.45);
     
     drawingContext.shadowBlur = 0;
-    textSize(24);
-    textFont('Helvetica Neue', 300);
+    textSize(20);
     fill(30, 50, 80);
-    text("Deine Reise hat ein Ende gefunden.", width / 2, height * 0.54);
-    text("Die Schildkröte ist sicher zu Hause.", width / 2, height * 0.59);
-    
-    textSize(18);
-    fill(92, 105, 122);
-    text("Klicke irgendwo hin, um das Abenteuer erneut zu starten.", width / 2, height * 0.65);
+    text("Die Schildkröte hat durch deine Brücken sicher nach Hause gefunden.", width / 2, height * 0.53);
+    text("Klicke irgendwo hin, um von vorn zu beginnen.", width / 2, height * 0.59);
     pop();
 }
 
@@ -604,9 +504,8 @@ function mouseReleased() {
 
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
-    generateBackgroundMountains();
+    generateHills();
     sunPos = { x: width - 150, y: 120 };
-    loadLevel(currentLevel);
 }
 </script>
 
