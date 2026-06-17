@@ -374,4 +374,88 @@ function drawTurtle(x, y, size, vx, timer) {
     rect(size/6, 4 + legWiggle, 4, 5, 2);   
 
     // Kopf
-    ellipse(size/
+    ellipse(size/2 + headWobble, -2, size * 0.4, size * 0.35);
+    fill(20);
+    ellipse(size/2 + 3 + headWobble, -3, 2.5, 2.5); 
+
+    // Panzer
+    fill(shellColor);
+    stroke(10, 40, 30);
+    strokeWeight(1.5);
+    arc(0, 4, size, size, PI, TWO_PI); 
+
+    // Panzer Muster
+    stroke(0, 255, 150, 80);
+    noFill();
+    arc(0, 4, size * 0.6, size * 0.6, PI, TWO_PI);
+    line(-size/4, 0, -size/8, -size/4);
+    line(size/4, 0, size/8, -size/4);
+
+    pop();
+}
+
+function checkGameStatus() {
+    if (savedCount >= turtlesNeeded && !gameOver) {
+        if (currentLevel < totalLevels) {
+            currentLevel++;
+            loadLevel(currentLevel);
+        } else {
+            gameOver = true;
+            drawWinScreen();
+        }
+    } else if (turtles.length === 0 && totalTurtlesSpawned >= maxTurtlesToSpawn && savedCount < turtlesNeeded) {
+        loadLevel(currentLevel);
+    }
+}
+
+function drawWinScreen() {
+    push();
+    drawingContext.shadowBlur = 30;
+    drawingContext.shadowColor = color(0, 0, 0);
+    textAlign(CENTER, CENTER);
+    fill(255, 183, 3);
+    textSize(28);
+    text("DIE REISE IST VOLLENDET! ✨🐢", width / 2, height * 0.45);
+    
+    drawingContext.shadowBlur = 10;
+    textSize(16);
+    fill(180, 200, 220);
+    text("Alle Schildkröten haben durch deine Brücken ihren Weg gefunden.", width / 2, height * 0.52);
+    text("Klicke irgendwo hin, um von vorn zu beginnen.", width / 2, height * 0.58);
+    pop();
+}
+
+function mousePressed() {
+    if (gameOver) {
+        currentLevel = 1;
+        loadLevel(currentLevel);
+        return;
+    }
+    currentLine = [];
+    currentLine.push({x: mouseX, y: mouseY});
+}
+
+function mouseDragged() {
+    if (gameOver) return;
+    let lastPt = currentLine[currentLine.length - 1];
+    if (!lastPt || dist(mouseX, mouseY, lastPt.x, lastPt.y) > 8) {
+        currentLine.push({x: mouseX, y: mouseY});
+    }
+}
+
+function mouseReleased() {
+    if (gameOver) return;
+    if (currentLine.length > 1) {
+        drawnLines.push(currentLine);
+    }
+    currentLine = [];
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    generateMountains();
+}
+</script>
+
+</body>
+</html>
