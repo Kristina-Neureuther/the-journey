@@ -57,7 +57,7 @@
 <div class="ui-container">
     <span class="game-title">The Journey</span>
     <span class="level-indicator" id="levelTxt">LEVEL 1 / 3</span><br>
-    <span class="highlight">KLICKE & ZIEHE</span>, um magische Brücken in die Welt zu zeichnen.
+    <span class="highlight">KLICKE & ZIEHE</span>, um magische Brücken zu zeichnen und die Schildkröte nach Hause zu leiten.
 </div>
 
 <script>
@@ -68,9 +68,10 @@ let drawnLines = [];
 let currentLine = [];
 let spawnTimer = 0;
 let savedCount = 0;
-let turtlesNeeded = 5;
+// Nur noch EINE Schildkröte pro Level
+let turtlesNeeded = 1;
 let totalTurtlesSpawned = 0;
-let maxTurtlesToSpawn = 7;
+let maxTurtlesToSpawn = 1;
 let gameOver = false;
 
 // Umgebungs-Elemente
@@ -279,10 +280,10 @@ function draw() {
     arc(goalPos.w/2, 10, goalPos.w, 45, PI, TWO_PI); 
     pop();
 
-    // --- SPAWN LOGIK ---
+    // --- SPAWN LOGIK (Spawnt sofort nach kurzem Moment) ---
     if (!gameOver && totalTurtlesSpawned < maxTurtlesToSpawn) {
         spawnTimer++;
-        if (spawnTimer > 100) { 
+        if (spawnTimer > 30) { // Spawnt jetzt deutlich schneller
             turtles.push({
                 x: startPos.x,
                 y: startPos.y - 15,
@@ -297,7 +298,14 @@ function draw() {
         }
     }
 
-    // --- DICKE GEZEICHNETE BRÜCKEN ---
+    // --- ALLE LINIEN ZUSAMMENFASSEN FÜR GRAFIK & KOLLISION ---
+    // Hier kombinieren wir fertige Linien und die aktuell gezeichnete Linie
+    let allLines = drawnLines.slice();
+    if (currentLine.length > 1) {
+        allLines.push(currentLine);
+    }
+
+    // --- DICKE GEZEICHNETE BRÜCKEN (Alle sehen exakt gleich aus!) ---
     // 1. Äußerer Glow (Weich)
     drawingContext.shadowBlur = 15;
     drawingContext.shadowColor = color(255, 100, 0);
@@ -306,14 +314,9 @@ function draw() {
     strokeJoin(ROUND);
     strokeCap(ROUND);
     noFill();
-    for (let linePoints of drawnLines) {
+    for (let linePoints of allLines) {
         beginShape();
         for (let pt of linePoints) vertex(pt.x, pt.y);
-        endShape();
-    }
-    if (mouseIsPressed && currentLine.length > 0) {
-        beginShape();
-        for (let pt of currentLine) vertex(pt.x, pt.y);
         endShape();
     }
     
@@ -321,18 +324,13 @@ function draw() {
     drawingContext.shadowBlur = 0;
     stroke(255, 230, 100); 
     strokeWeight(6);
-    for (let linePoints of drawnLines) {
+    for (let linePoints of allLines) {
         beginShape();
         for (let pt of linePoints) vertex(pt.x, pt.y);
         endShape();
     }
-    if (mouseIsPressed && currentLine.length > 0) {
-        beginShape();
-        for (let pt of currentLine) vertex(pt.x, pt.y);
-        endShape();
-    }
 
-    // --- SCHILDKRÖTEN LOGIK (Mit verbesserter Hitbox) ---
+    // --- SCHILDKRÖTEN LOGIK ---
     for (let i = turtles.length - 1; i >= 0; i--) {
         let t = turtles[i];
         
@@ -353,15 +351,14 @@ function draw() {
             }
         }
         
-        // Verbesserte Brücken Kollision
-        for (let linePoints of drawnLines) {
+        // Brücken Kollision (Gilt jetzt auch für die Linie, die DU GERADE ZEICHNEST)
+        for (let linePoints of allLines) {
             for (let j = 0; j < linePoints.length - 1; j++) {
                 let p1 = linePoints[j];
                 let p2 = linePoints[j+1];
                 let minX = min(p1.x, p2.x);
                 let maxX = max(p1.x, p2.x);
                 
-                // Etwas Toleranz auf der X-Achse
                 if (t.x >= minX - 2 && t.x <= maxX + 2) {
                     let dx = p2.x - p1.x;
                     let lineY;
@@ -372,7 +369,6 @@ function draw() {
                         lineY = p1.y + ratio * (p2.y - p1.y);
                     }
                     
-                    // Deutlich vergrößerte Hitbox auf der Y-Achse
                     if (t.y + 10 >= lineY - 18 && t.y - t.vy + 10 <= lineY + 18) {
                         t.y = lineY - 10;
                         t.isGrounded = true;
@@ -395,7 +391,7 @@ function draw() {
             continue;
         }
         
-        // Wasser-Splash (Fällt vom Bildschirm)
+        // Absturz ins Wasser -> Level Neustart!
         if (t.y > height - 10) {
             turtles.splice(i, 1);
             continue;
@@ -419,7 +415,6 @@ function drawTurtle(x, y, size, vx, timer) {
     let shellColor = color(34, 139, 34);
     let skinColor = color(152, 251, 152);
 
-    // Beine
     fill(skinColor);
     stroke(20, 80, 20);
     strokeWeight(1.5);
@@ -428,19 +423,16 @@ function drawTurtle(x, y, size, vx, timer) {
     rect(-size/5, 4 - legWiggle, 5, 6, 2);  
     rect(size/6, 4 + legWiggle, 5, 6, 2);   
 
-    // Kopf
     ellipse(size/2 + headWobble, -2, size * 0.45, size * 0.4);
     fill(0);
     noStroke();
     ellipse(size/2 + 4 + headWobble, -4, 3, 3); 
 
-    // Panzer
     fill(shellColor);
     stroke(20, 60, 20);
     strokeWeight(2);
     arc(0, 4, size, size + 2, PI, TWO_PI); 
 
-    // Panzer-Muster
     stroke(120, 220, 120, 180);
     strokeWeight(1.5);
     noFill();
@@ -461,6 +453,7 @@ function checkGameStatus() {
             drawWinScreen();
         }
     } else if (turtles.length === 0 && totalTurtlesSpawned >= maxTurtlesToSpawn && savedCount < turtlesNeeded) {
+        // Schildkröte ist abgestürzt: Startet das Level sofort neu
         loadLevel(currentLevel);
     }
 }
@@ -473,12 +466,12 @@ function drawWinScreen() {
     drawingContext.shadowColor = color(255, 255, 255);
     fill(220, 90, 0);
     textSize(36);
-    text("The Journey is Completed! ☀️🐢", width / 2, height * 0.45);
+    text("DIE REISE IST VOLLENDET! ☀️🐢", width / 2, height * 0.45);
     
     drawingContext.shadowBlur = 0;
     textSize(20);
     fill(30, 50, 80);
-    text("Alle Schildkröten haben durch deine Brücken ihren Weg gefunden.", width / 2, height * 0.53);
+    text("Die Schildkröte hat durch deine Brücken sicher nach Hause gefunden.", width / 2, height * 0.53);
     text("Klicke irgendwo hin, um von vorn zu beginnen.", width / 2, height * 0.59);
     pop();
 }
