@@ -50,11 +50,16 @@
             font-weight: bold;
             letter-spacing: 3px;
         }
+
+        /* Klasse zum Ausblenden der UI am Ende */
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
 
-<div class="ui-container">
+<div class="ui-container" id="mainUI">
     <span class="game-title">The Journey</span>
     <span class="level-indicator" id="levelTxt">LEVEL 1 / 3</span><br>
     <span class="highlight">KLICKE & ZIEHE</span>, um goldene Brücken zu zeichnen und die Schildkröte sicher an ihr Ziel zu bringen.
@@ -68,7 +73,6 @@ let drawnLines = [];
 let currentLine = [];
 let spawnTimer = 0;
 let savedCount = 0;
-// Nur noch EINE Schildkröte pro Level
 let turtlesNeeded = 1;
 let totalTurtlesSpawned = 0;
 let maxTurtlesToSpawn = 1;
@@ -128,6 +132,9 @@ function loadLevel(lvl) {
     totalTurtlesSpawned = 0;
     gameOver = false;
     
+    // UI wieder einblenden, falls wir neu starten
+    document.getElementById("mainUI").classList.remove("hidden");
+    
     generateHills();
     document.getElementById("levelTxt").innerText = `LEVEL ${lvl} / ${totalLevels}`;
     
@@ -172,12 +179,20 @@ function drawGradientShape(points, colorTop, colorBottom) {
 }
 
 function draw() {
-    // 1. Himmel
+    // 1. Hintergrund löschen (muss immer am Anfang stehen)
+    // p5.js zeichnet einen Farbverlauf für den Himmel
     let skyGrad = drawingContext.createLinearGradient(0, 0, 0, height);
     skyGrad.addColorStop(0, "#3a9ced"); 
     skyGrad.addColorStop(1, "#cce9ff"); 
     drawingContext.fillStyle = skyGrad;
     drawingContext.fillRect(0, 0, width, height);
+
+    // WICHTIGE ÄNDERUNG: Wenn das Spiel vorbei ist, 
+    // zeichnen wir NUR noch den Gewinnbildschirm und springen aus der Funktion
+    if (gameOver) {
+        drawWinScreen();
+        return; // Verhindert, dass der Rest des Spiels weiterläuft
+    }
 
     // 2. Sonne & Lichtstrahlen
     noStroke();
@@ -299,13 +314,12 @@ function draw() {
     }
 
     // --- ALLE LINIEN ZUSAMMENFASSEN FÜR GRAFIK & KOLLISION ---
-    // Hier kombinieren wir fertige Linien und die aktuell gezeichnete Linie
     let allLines = drawnLines.slice();
     if (currentLine.length > 1) {
         allLines.push(currentLine);
     }
 
-    // --- DICKE GEZEICHNETE BRÜCKEN (Alle sehen exakt gleich aus!) ---
+    // --- DICKE GEZEICHNETE BRÜCKEN ---
     // 1. Äußerer Glow (Weich)
     drawingContext.shadowBlur = 15;
     drawingContext.shadowColor = color(255, 100, 0);
@@ -351,7 +365,7 @@ function draw() {
             }
         }
         
-        // Brücken Kollision (Gilt jetzt auch für die Linie, die DU GERADE ZEICHNEST)
+        // Brücken Kollision
         for (let linePoints of allLines) {
             for (let j = 0; j < linePoints.length - 1; j++) {
                 let p1 = linePoints[j];
@@ -388,17 +402,20 @@ function draw() {
         if (t.x > goalPos.x && t.x < goalPos.x + goalPos.w && t.y > goalPos.y && t.y < goalPos.y + goalPos.h) {
             savedCount++;
             turtles.splice(i, 1);
-            continue;
+            // checkGameStatus wird hiernach aufgerufen
         }
         
         // Absturz ins Wasser -> Level Neustart!
-        if (t.y > height - 10) {
+        else if (t.y > height - 10) {
             turtles.splice(i, 1);
-            continue;
+            // checkGameStatus wird hiernach aufgerufen
         }
 
-        drawTurtle(t.x, t.y, t.size, t.vx, t.bounceTimer);
-        t.bounceTimer += 0.15;
+        // Schildkröte nur zeichnen, wenn sie noch existiert
+        if (i < turtles.length && turtles[i] === t) {
+            drawTurtle(t.x, t.y, t.size, t.vx, t.bounceTimer);
+            t.bounceTimer += 0.15;
+        }
     }
 
     checkGameStatus();
@@ -449,8 +466,11 @@ function checkGameStatus() {
             currentLevel++;
             loadLevel(currentLevel);
         } else {
+            // WICHTIGE ÄNDERUNG: Wir zeichnen hier nicht mehr, 
+            // sondern setzen nur die Zustände.
             gameOver = true;
-            drawWinScreen();
+            // UI oben links ausblenden
+            document.getElementById("mainUI").classList.add("hidden");
         }
     } else if (turtles.length === 0 && totalTurtlesSpawned >= maxTurtlesToSpawn && savedCount < turtlesNeeded) {
         // Schildkröte ist abgestürzt: Startet das Level sofort neu
@@ -460,24 +480,26 @@ function checkGameStatus() {
 
 function drawWinScreen() {
     push();
+    // p5.js benötigt diese Befehle, um Text in die Mitte zu setzen
     textAlign(CENTER, CENTER);
     
     drawingContext.shadowBlur = 15;
     drawingContext.shadowColor = color(255, 255, 255);
     fill(220, 90, 0);
-    textSize(36);
+    textSize(48); // Größerer Text für den Sieg
     text("ALLES IST GUT! ☀️🐢", width / 2, height * 0.45);
     
     drawingContext.shadowBlur = 0;
-    textSize(20);
+    textSize(22); // Größerer Sub-Text
     fill(30, 50, 80);
-    text("Die Schildkröte hat durch deine Brücken sicher nach Hause gefunden.", width / 2, height * 0.53);
-    text("Klicke irgendwo hin, um von vorn zu beginnen.", width / 2, height * 0.59);
+    text("Die Schildkröte hat durch deine Brücken sicher nach Hause gefunden.", width / 2, height * 0.54);
+    text("Klicke irgendwo hin, um von vorn zu beginnen.", width / 2, height * 0.60);
     pop();
 }
 
 function mousePressed() {
     if (gameOver) {
+        // Bei Klick nach dem Sieg -> Spiel komplett zurücksetzen
         currentLevel = 1;
         loadLevel(currentLevel);
         return;
