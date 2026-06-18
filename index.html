@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Journey - A Beautiful Summer Puzzle</title>
+    <title>The Journey - A Summer Adventure</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
         body {
@@ -62,7 +62,7 @@
 <div class="ui-container" id="mainUI">
     <span class="game-title">The Journey</span>
     <span class="level-indicator" id="levelTxt">LEVEL 1 / 3</span><br>
-    <span class="highlight">KLICKE & ZIEHE</span>, um goldene Brücken zu zeichnen und die Schildkröte sicher an ihr Ziel zu bringen.
+    <span class="highlight">KLICKE & ZIEHE</span>, Baue goldene Brücken. Bring die Schildkröte sicher an ihr Ziel.
 </div>
 
 <script>
@@ -179,19 +179,16 @@ function drawGradientShape(points, colorTop, colorBottom) {
 }
 
 function draw() {
-    // 1. Hintergrund löschen (muss immer am Anfang stehen)
-    // p5.js zeichnet einen Farbverlauf für den Himmel
+    // 1. Hintergrund löschen
     let skyGrad = drawingContext.createLinearGradient(0, 0, 0, height);
     skyGrad.addColorStop(0, "#3a9ced"); 
     skyGrad.addColorStop(1, "#cce9ff"); 
     drawingContext.fillStyle = skyGrad;
     drawingContext.fillRect(0, 0, width, height);
 
-    // WICHTIGE ÄNDERUNG: Wenn das Spiel vorbei ist, 
-    // zeichnen wir NUR noch den Gewinnbildschirm und springen aus der Funktion
     if (gameOver) {
         drawWinScreen();
-        return; // Verhindert, dass der Rest des Spiels weiterläuft
+        return; 
     }
 
     // 2. Sonne & Lichtstrahlen
@@ -295,10 +292,10 @@ function draw() {
     arc(goalPos.w/2, 10, goalPos.w, 45, PI, TWO_PI); 
     pop();
 
-    // --- SPAWN LOGIK (Spawnt sofort nach kurzem Moment) ---
+    // --- SPAWN LOGIK ---
     if (!gameOver && totalTurtlesSpawned < maxTurtlesToSpawn) {
         spawnTimer++;
-        if (spawnTimer > 30) { // Spawnt jetzt deutlich schneller
+        if (spawnTimer > 30) {
             turtles.push({
                 x: startPos.x,
                 y: startPos.y - 15,
@@ -313,14 +310,13 @@ function draw() {
         }
     }
 
-    // --- ALLE LINIEN ZUSAMMENFASSEN FÜR GRAFIK & KOLLISION ---
+    // --- ALLE LINIEN ZUSAMMENFASSEN ---
     let allLines = drawnLines.slice();
     if (currentLine.length > 1) {
         allLines.push(currentLine);
     }
 
     // --- DICKE GEZEICHNETE BRÜCKEN ---
-    // 1. Äußerer Glow (Weich)
     drawingContext.shadowBlur = 15;
     drawingContext.shadowColor = color(255, 100, 0);
     stroke(255, 140, 0, 150); 
@@ -334,7 +330,6 @@ function draw() {
         endShape();
     }
     
-    // 2. Innerer Kern (Hell)
     drawingContext.shadowBlur = 0;
     stroke(255, 230, 100); 
     strokeWeight(6);
@@ -348,14 +343,13 @@ function draw() {
     for (let i = turtles.length - 1; i >= 0; i--) {
         let t = turtles[i];
         
-        if (!t.isGrounded) t.vy += 0.3; // Schwerkraft
+        if (!t.isGrounded) t.vy += 0.3; 
         else t.vy = 0;
         
         t.x += t.vx;
         t.y += t.vy;
         t.isGrounded = false; 
         
-        // Plattform Kollision
         for (let p of platforms) {
             if (t.x > p.x && t.x < p.x + p.w) {
                 if (t.y + 10 >= p.y && t.y - t.vy + 10 <= p.y + 15) {
@@ -365,7 +359,6 @@ function draw() {
             }
         }
         
-        // Brücken Kollision
         for (let linePoints of allLines) {
             for (let j = 0; j < linePoints.length - 1; j++) {
                 let p1 = linePoints[j];
@@ -398,20 +391,14 @@ function draw() {
         
         if (t.isGrounded && abs(t.vx) < 0.2) t.vx = 1.4; 
 
-        // Ziel-Erkennung
         if (t.x > goalPos.x && t.x < goalPos.x + goalPos.w && t.y > goalPos.y && t.y < goalPos.y + goalPos.h) {
             savedCount++;
             turtles.splice(i, 1);
-            // checkGameStatus wird hiernach aufgerufen
         }
-        
-        // Absturz ins Wasser -> Level Neustart!
         else if (t.y > height - 10) {
             turtles.splice(i, 1);
-            // checkGameStatus wird hiernach aufgerufen
         }
 
-        // Schildkröte nur zeichnen, wenn sie noch existiert
         if (i < turtles.length && turtles[i] === t) {
             drawTurtle(t.x, t.y, t.size, t.vx, t.bounceTimer);
             t.bounceTimer += 0.15;
@@ -466,31 +453,26 @@ function checkGameStatus() {
             currentLevel++;
             loadLevel(currentLevel);
         } else {
-            // WICHTIGE ÄNDERUNG: Wir zeichnen hier nicht mehr, 
-            // sondern setzen nur die Zustände.
             gameOver = true;
-            // UI oben links ausblenden
             document.getElementById("mainUI").classList.add("hidden");
         }
     } else if (turtles.length === 0 && totalTurtlesSpawned >= maxTurtlesToSpawn && savedCount < turtlesNeeded) {
-        // Schildkröte ist abgestürzt: Startet das Level sofort neu
         loadLevel(currentLevel);
     }
 }
 
 function drawWinScreen() {
     push();
-    // p5.js benötigt diese Befehle, um Text in die Mitte zu setzen
     textAlign(CENTER, CENTER);
     
     drawingContext.shadowBlur = 15;
     drawingContext.shadowColor = color(255, 255, 255);
     fill(220, 90, 0);
-    textSize(48); // Größerer Text für den Sieg
+    textSize(48);
     text("ALLES IST GUT! ☀️🐢", width / 2, height * 0.45);
     
     drawingContext.shadowBlur = 0;
-    textSize(22); // Größerer Sub-Text
+    textSize(22);
     fill(30, 50, 80);
     text("Klicke irgendwo hin, um von vorn zu beginnen.", width / 2, height * 0.60);
     pop();
@@ -498,7 +480,6 @@ function drawWinScreen() {
 
 function mousePressed() {
     if (gameOver) {
-        // Bei Klick nach dem Sieg -> Spiel komplett zurücksetzen
         currentLevel = 1;
         loadLevel(currentLevel);
         return;
@@ -523,10 +504,17 @@ function mouseReleased() {
     currentLine = [];
 }
 
+// HIER IST DIE KORREKTUR:
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
     generateHills();
     sunPos = { x: width - 150, y: 120 };
+    
+    // Zwingt das Spiel, die Position der Tür und Plattformen an die 
+    // finale Breite des Browser-Fensters anzupassen.
+    if (!gameOver) {
+        loadLevel(currentLevel);
+    }
 }
 </script>
 
