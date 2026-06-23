@@ -1,6 +1,6 @@
 # The Journey 🐢
 
-An interactive, physics-based puzzle game in the style of *Lemmings*, featuring custom vector drawing.
+## Kristina Neureuther – Systems Thinking & Strategy
 
 ### Live Demo
 [Click here for Live Demo](https://kristina-neureuther.github.io/the-journey/)
